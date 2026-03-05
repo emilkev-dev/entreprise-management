@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Flask / local runtime data
+instance/
+uploads/
+.run.lock
+
+# Environment variables
+.env
+.env.*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

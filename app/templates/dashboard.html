@@ -1,0 +1,504 @@
+<!doctype html>
+<!--
+  Rôle du fichier:
+  Template principal du dashboard EMS affiché dans le navigateur.
+  Il structure les sections UI (auth, menu, tableaux, formulaires, modales).
+-->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enterprise Management Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css', v='20260305-02') }}" />
+  </head>
+  <body>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div id="loginScreen" class="login-screen">
+      <div class="login-card">
+        <h1>Enterprise Management</h1>
+        <p>Connecte-toi pour accéder au système RH.</p>
+        <form id="loginForm" class="form-grid">
+          <label>
+            Identifiant (matricule, username ou email)
+            <input id="username" type="text" value="superadmin" required />
+          </label>
+          <label>
+            Password
+            <input id="password" type="password" value="superadmin123" required />
+          </label>
+          <button type="submit" class="btn btn-primary">Se connecter</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="appShell" class="app-shell hidden">
+      <aside class="sidebar glass">
+        <div class="brand">
+          <span class="brand-chip">EMS</span>
+          <div>
+            <h2 id="sidebarCompanyName">EMS Pro</h2>
+            <small>Gestion RH & Finance</small>
+          </div>
+        </div>
+        <nav class="menu" id="menuNav">
+          <button data-section="overview" class="menu-item active">Vue d'ensemble</button>
+          <button data-section="employees" class="menu-item">Employés</button>
+          <button data-section="departments" class="menu-item">Départements</button>
+          <button data-section="team" class="menu-item">Équipe</button>
+          <button data-section="roles" class="menu-item">Rôles & Permissions</button>
+          <button data-section="payrolls" class="menu-item">Salaires</button>
+          <button data-section="attendances" class="menu-item">Présences</button>
+          <button data-section="leaves" class="menu-item">Congés</button>
+          <button data-section="contracts" class="menu-item">Contrats</button>
+          <button data-section="messages" class="menu-item">Messagerie <span id="messagesUnreadBadge" class="menu-badge hidden">0</span></button>
+          <button data-section="accounts" class="menu-item">Comptes Agents</button>
+          <button data-section="accounting" class="menu-item">Comptabilité</button>
+          <button data-section="reports" class="menu-item">Reporting</button>
+        </nav>
+        <button id="logoutBtn" class="btn btn-danger">Déconnexion</button>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar glass">
+          <div class="topbar-left">
+            <div class="company-badge" aria-label="Nom de l'entreprise">
+              <span class="company-dot" aria-hidden="true"></span>
+              <div>
+                <small class="company-label">Entreprise</small>
+                <strong id="companyName">EMS Pro</strong>
+              </div>
+            </div>
+            <h1 id="sectionTitle">Vue d'ensemble</h1>
+          </div>
+          <div class="topbar-right">
+            <article class="owner-card" aria-label="Informations du propriétaire du compte">
+              <small class="owner-label">Propriétaire du compte</small>
+              <strong id="ownerName">Utilisateur</strong>
+              <span id="ownerRole">Rôle non défini</span>
+            </article>
+            <button id="refreshBtn" class="btn btn-secondary">Rafraîchir les données</button>
+          </div>
+        </header>
+
+        <section id="section-overview" class="section active">
+          <div class="kpi-grid">
+            <article class="kpi-card glass">
+              <h3>Masse salariale</h3>
+              <p id="kpiPayroll">0</p>
+            </article>
+            <article class="kpi-card glass">
+              <h3>Salaire moyen</h3>
+              <p id="kpiAvgSalary">0</p>
+            </article>
+            <article class="kpi-card glass">
+              <h3>Taux d'absentéisme</h3>
+              <p id="kpiAbsence">0%</p>
+            </article>
+            <article class="kpi-card glass">
+              <h3>Effectif</h3>
+              <p id="kpiEmployees">0</p>
+            </article>
+          </div>
+          <div class="charts-grid">
+            <div class="chart-card glass">
+              <h3>Employés par département</h3>
+              <canvas id="deptChart"></canvas>
+            </div>
+            <div class="chart-card glass">
+              <h3>Statut des congés</h3>
+              <canvas id="leaveChart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-employees" class="section">
+          <div class="split">
+            <form id="employeeForm" class="panel glass form-grid two-col">
+              <h3>Ajouter un employé</h3>
+              <label>Prénom<input name="first_name" required /></label>
+              <label>Nom<input name="last_name" required /></label>
+              <label>Email pro<input name="email" type="email" required /></label>
+              <label>Téléphone<input name="phone" required /></label>
+              <label>Adresse<input name="address" required /></label>
+              <label>Date embauche<input name="hire_date" type="date" required /></label>
+              <label>Photo URL<input name="photo_url" /></label>
+              <label>Statut
+                <select name="status">
+                  <option>Actif</option><option>Suspendu</option><option>Démissionné</option>
+                </select>
+              </label>
+              <label>Département
+                <select name="department_id" id="employeeDepartmentSelect">
+                  <option value="">Non assigné</option>
+                </select>
+              </label>
+              <label>Rôle
+                <select name="role_id" id="employeeRoleSelect" required>
+                  <option value="">Sélectionner un rôle</option>
+                </select>
+              </label>
+              <button class="btn btn-primary">Créer</button>
+            </form>
+            <div class="panel glass">
+              <h3>Liste des employés</h3>
+              <div id="employeesTable" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-team" class="section">
+          <div class="split">
+            <div class="panel glass">
+              <h3>Gestion de l'équipe</h3>
+              <p>Interface dédiée aux managers pour visualiser et gérer leur équipe. Utilisez le panneau Rôles & Permissions pour attribuer des permissions de manager.</p>
+              <div id="teamPanel">
+                <p class="muted">Aucun contenu spécifique pour l'instant.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-departments" class="section">
+          <div class="split">
+            <form id="departmentForm" class="panel glass form-grid">
+              <h3>Créer un département</h3>
+              <label>Nom<input name="name" required /></label>
+              <label>Budget<input name="budget" type="number" step="0.01" required /></label>
+              <button class="btn btn-primary">Créer</button>
+            </form>
+            <div class="panel glass">
+              <h3>Départements</h3>
+              <div id="departmentsTable" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-roles" class="section">
+          <div class="split roles-layout">
+            <form id="roleForm" class="panel glass form-grid role-create-form">
+              <h3>Créer un rôle</h3>
+              <label>Nom<input name="name" required /></label>
+              <label>
+                Permissions
+                <div id="rolePermissionsChecklist" class="permissions-checklist">
+                  <div class="perm-empty">Chargement des permissions...</div>
+                </div>
+              </label>
+              <button class="btn btn-primary">Créer</button>
+            </form>
+            <div class="panel glass roles-management-panel">
+              <h3>Rôles & permissions</h3>
+              <div id="rolesTable" class="table-wrap"></div>
+              <h3 class="roles-update-title">Modifier permissions d'un rôle</h3>
+              <div class="form-grid roles-update-grid">
+                <label>
+                  Rôle
+                  <select id="rolePermissionRoleId">
+                    <option value="">Sélectionner</option>
+                  </select>
+                </label>
+                <label>
+                  Permissions
+                  <div id="updateRolePermissionsChecklist" class="permissions-checklist">
+                    <div class="perm-empty">Sélectionne un rôle pour afficher les permissions.</div>
+                  </div>
+                </label>
+                <button id="btnRolePermissions" class="btn btn-secondary" type="button">Mettre à jour permissions</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-payrolls" class="section">
+          <div class="split">
+            <form id="payrollForm" class="panel glass form-grid two-col">
+              <h3>Créer une fiche de paie</h3>
+              <label>
+                Employé
+                <input id="payrollEmployeeQuery" type="text" placeholder="Rechercher un agent..." list="employeeSuggestionsList" autocomplete="off" />
+                <select id="payrollEmployeeId" name="employee_id" required>
+                  <option value="">Sélectionner un agent</option>
+                </select>
+              </label>
+              <label>Salaire de base<input name="base_salary" type="number" step="0.01" required /></label>
+              <label>Mois de paie<input name="payroll_month" type="month" required /></label>
+              <label>Prime<input name="bonus" type="number" step="0.01" value="0" /></label>
+              <label>Heures sup<input name="overtime_hours" type="number" step="0.01" value="0" /></label>
+              <label>Déductions<input name="deductions" type="number" step="0.01" value="0" /></label>
+              <label>Impôts<input name="taxes" type="number" step="0.01" value="0" /></label>
+              <button class="btn btn-primary">Calculer & enregistrer</button>
+            </form>
+            <div class="panel glass">
+              <h3>Historique paie</h3>
+              <div id="payrollsTable" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-attendances" class="section">
+          <div class="split">
+            <form id="attendanceForm" class="panel glass form-grid two-col">
+              <h3>Pointage entrée</h3>
+              <label>
+                Employé
+                <input id="attendanceEmployeeQuery" type="text" placeholder="Rechercher un agent..." list="employeeSuggestionsList" autocomplete="off" />
+                <select id="attendanceEmployeeId" name="employee_id" required>
+                  <option value="">Sélectionner un agent</option>
+                </select>
+              </label>
+              <label>Check-in<input name="check_in" type="datetime-local" required /></label>
+              <label>
+                Absence non justifiée
+                <select name="is_absent">
+                  <option value="false">Non</option>
+                  <option value="true">Oui</option>
+                </select>
+              </label>
+              <label>Retard (minutes)<input name="late_minutes" type="number" value="0" /></label>
+              <button class="btn btn-primary">Enregistrer l'entrée</button>
+              <label>
+                Check-out (par employé)
+                <input id="attendanceCheckOutAt" type="datetime-local" />
+              </label>
+              <button id="btnAttendanceCheckout" class="btn btn-secondary" type="button">Enregistrer la sortie</button>
+            </form>
+            <div class="panel glass">
+              <h3>Présences</h3>
+              <div id="attendancesTable" class="table-wrap"></div>
+              <h3 style="margin-top: 14px;">Synthèse mensuelle présence/absence</h3>
+              <div class="actions-inline" style="grid-template-columns: 1fr auto;">
+                <input id="attendanceSummaryMonth" type="month" />
+                <button id="btnAttendanceSummary" class="btn btn-secondary" type="button">Voir synthèse</button>
+              </div>
+              <div id="attendanceSummaryTable" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-leaves" class="section">
+          <div class="split">
+            <form id="leaveForm" class="panel glass form-grid two-col">
+              <h3>Demande de congé</h3>
+              <label>
+                Employé
+                <input id="leaveEmployeeQuery" type="text" placeholder="Rechercher un agent..." list="employeeSuggestionsList" autocomplete="off" />
+                <select id="leaveEmployeeId" name="employee_id" required>
+                  <option value="">Sélectionner un agent</option>
+                </select>
+              </label>
+              <label>Date début<input name="start_date" type="date" required /></label>
+              <label>Date fin<input name="end_date" type="date" required /></label>
+              <label>Raison<input name="reason" required /></label>
+              <button class="btn btn-primary">Envoyer</button>
+            </form>
+            <div class="panel glass">
+              <h3>Demandes de congé</h3>
+              <div id="leavesTable" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-contracts" class="section">
+          <div class="split">
+            <form id="contractForm" class="panel glass form-grid two-col">
+              <h3>Créer un contrat</h3>
+              <label>
+                Employé
+                <input id="contractEmployeeQuery" type="text" placeholder="Rechercher un agent..." list="employeeSuggestionsList" autocomplete="off" />
+                <select id="contractEmployeeId" name="employee_id" required>
+                  <option value="">Sélectionner un agent</option>
+                </select>
+              </label>
+              <label>Type
+                <select name="contract_type">
+                  <option>CDI</option>
+                  <option>CDD</option>
+                  <option>Stage</option>
+                </select>
+              </label>
+              <label>Date début<input name="start_date" type="date" required /></label>
+              <label>Date fin<input name="end_date" type="date" /></label>
+              <label>Salaire contractuel<input name="contractual_salary" type="number" step="0.01" required /></label>
+              <label>Document PDF (path)<input name="document_path" /></label>
+              <button class="btn btn-primary">Créer contrat</button>
+            </form>
+            <div class="panel glass">
+              <h3>Contrats</h3>
+              <div id="contractsTable" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-messages" class="section">
+          <div class="chat-shell glass">
+            <aside class="chat-sidebar">
+              <div class="chat-sidebar-top">
+                <input id="messagesSearch" type="text" placeholder="Rechercher une discussion..." />
+                <button id="btnMessagesRefresh" class="btn btn-secondary" type="button">Actualiser</button>
+              </div>
+              <div class="chat-sidebar-actions">
+                <select id="newConversationRecipient">
+                  <option value="">Choisir un agent...</option>
+                </select>
+                <button id="btnNewConversation" class="btn btn-primary" type="button">Nouvelle discussion</button>
+              </div>
+              <div id="messagesConversations" class="chat-conversations"></div>
+            </aside>
+
+            <section class="chat-main">
+              <header class="chat-header">
+                <h3 id="chatTitle">Sélectionne une discussion</h3>
+                <small id="chatSubtitle">Aucun message chargé</small>
+              </header>
+              <div id="chatMessages" class="chat-messages"></div>
+              <form id="chatComposerForm" class="chat-composer">
+                <input id="chatMessageInput" name="content" type="text" maxlength="2000" placeholder="Écris un message..." required />
+                <button class="btn btn-primary" type="submit">Envoyer</button>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <section id="section-accounts" class="section">
+          <div class="panel glass">
+            <h3>Administration des comptes agents</h3>
+            <div class="actions-inline">
+              <input id="accountUserQuery" type="text" placeholder="Rechercher un agent..." list="accountSuggestionsList" autocomplete="off" />
+              <select id="accountUserId">
+                <option value="">Sélectionner un agent</option>
+              </select>
+              <select id="accountRoleId">
+                <option value="">Rôle</option>
+              </select>
+              <select id="accountStatus">
+                <option value="">Statut</option>
+                <option value="Actif">Actif</option>
+                <option value="Suspendu">Suspendu</option>
+                <option value="Démissionné">Démissionné</option>
+              </select>
+              <button id="btnAccountRole" class="btn btn-secondary" type="button">Changer rôle</button>
+              <button id="btnAccountStatus" class="btn btn-secondary" type="button">Changer statut</button>
+              <button id="btnAccountReset" class="btn btn-danger" type="button">Reset mot de passe</button>
+            </div>
+            <div id="accountsTable" class="table-wrap"></div>
+            <h3 style="margin-top: 18px;">Historique des actions admin</h3>
+            <div class="actions-inline logs-filters">
+              <input id="logUsername" type="text" placeholder="Filtre utilisateur" />
+              <input id="logAction" type="text" placeholder="Filtre action" />
+              <input id="logStartDate" type="date" />
+              <input id="logEndDate" type="date" />
+              <button id="btnLogsFilter" class="btn btn-secondary" type="button">Filtrer</button>
+              <button id="btnLogsClear" class="btn btn-secondary" type="button">Réinitialiser</button>
+              <button id="btnLogsExportCsv" class="btn btn-primary" type="button">Exporter CSV</button>
+              <button id="btnLogsExportPdf" class="btn btn-primary" type="button">Exporter PDF</button>
+            </div>
+            <div id="accountLogsTable" class="table-wrap"></div>
+          </div>
+        </section>
+
+        <section id="section-reports" class="section">
+          <div class="panel glass">
+            <h3>Reporting global</h3>
+            <div class="reports-layout">
+              <pre id="reportsInfo" class="json-box">Ouvre cette section pour charger le reporting.</pre>
+              <div id="reportsCards" class="kpi-grid"></div>
+              <div id="reportsDepartments" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-accounting" class="section">
+          <div class="panel glass">
+            <h3>Comptabilité avancée</h3>
+            <div class="reports-layout">
+              <pre id="accountingInfo" class="json-box">Ouvre cette section pour charger la comptabilité.</pre>
+              <div id="accountingCards" class="kpi-grid"></div>
+              <div class="charts-grid">
+                <div class="chart-card glass">
+                  <h3>Évolution mensuelle (brut/net/impôts)</h3>
+                  <canvas id="accountingMonthlyChart"></canvas>
+                </div>
+                <div class="chart-card glass">
+                  <h3>Structure des coûts</h3>
+                  <canvas id="accountingCostChart"></canvas>
+                </div>
+              </div>
+              <div class="chart-card glass" style="margin-top: 12px;">
+                <h3>Net par département</h3>
+                <canvas id="accountingDepartmentsChart"></canvas>
+              </div>
+              <div id="accountingDepartmentsTable" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <div id="toast" class="toast hidden"></div>
+      </main>
+    </div>
+
+    <datalist id="employeeSuggestionsList"></datalist>
+    <datalist id="accountSuggestionsList"></datalist>
+
+    <div id="passwordModal" class="password-modal hidden">
+      <div class="password-card glass">
+        <h3>Sécurité du compte</h3>
+        <p>Tu dois changer le mot de passe par défaut pour continuer (minimum 6 caractères, différent de l'actuel).</p>
+        <form id="passwordUpdateForm" class="form-grid">
+          <label>
+            Mot de passe actuel
+            <input type="password" name="current_password" minlength="6" autocomplete="current-password" required />
+          </label>
+          <label>
+            Nouveau mot de passe
+            <input type="password" name="new_password" minlength="6" autocomplete="new-password" required />
+          </label>
+          <label>
+            Confirmer le nouveau mot de passe
+            <input type="password" name="confirm_new_password" minlength="6" autocomplete="new-password" required />
+          </label>
+          <button class="btn btn-primary" type="submit">Mettre à jour</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="editModal" class="password-modal hidden" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+      <div class="password-card glass edit-card">
+        <h3 id="editModalTitle">Modifier</h3>
+        <form id="editModalForm" class="form-grid"></form>
+        <div class="edit-modal-actions">
+          <button id="editModalCancel" class="btn btn-secondary" type="button">Annuler</button>
+          <button id="editModalSubmit" class="btn btn-primary" type="button">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirmModal" class="password-modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+      <div class="password-card glass confirm-card">
+        <h3 id="confirmModalTitle">Confirmation</h3>
+        <p id="confirmModalMessage">Es-tu sûr de vouloir continuer ?</p>
+        <div class="edit-modal-actions">
+          <button id="confirmModalCancel" class="btn btn-secondary" type="button">Annuler</button>
+          <button id="confirmModalSubmit" class="btn btn-danger" type="button">Confirmer</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="feedbackModal" class="password-modal hidden" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle">
+      <div class="password-card glass confirm-card feedback-card">
+        <h3 id="feedbackModalTitle">Information</h3>
+        <p id="feedbackModalMessage">Opération terminée.</p>
+        <div class="edit-modal-actions">
+          <button id="feedbackModalClose" class="btn btn-secondary" type="button">Fermer</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js', v='20260305-02') }}"></script>
+  </body>
+</html>

@@ -1,0 +1,62 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Flask Server",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"scripts\\start_app.ps1",
+				"-Clean"
+			],
+			"isBackground": false,
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": false,
+				"clear": true
+			}
+		},
+		{
+			"label": "Run Flask Server (Logs)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"scripts\\start_app.ps1",
+				"-Clean",
+				"-Foreground"
+			],
+			"isBackground": false,
+			"presentation": {
+				"reveal": "always",
+				"panel": "new",
+				"focus": true,
+				"clear": true
+			}
+		},
+		{
+			"label": "Stop Flask Server",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"$project='COURS\\L3\\POO\\EXAMEN'; $procs=Get-CimInstance Win32_Process -Filter \"Name = 'python.exe'\" | Where-Object { $_.CommandLine -like '*run.py*' -and $_.CommandLine -like \"*$project*\" }; foreach($p in $procs){ Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue }; if(Test-Path '.run.lock'){ Remove-Item '.run.lock' -Force -ErrorAction SilentlyContinue }; Write-Host 'Flask server stopped (if running).'"
+			],
+			"isBackground": false,
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": false,
+				"clear": false
+			}
+		}
+	]
+}
